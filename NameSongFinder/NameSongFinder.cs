@@ -15,7 +15,7 @@ using SpotifyApi.NetCore.Http;
 
 namespace NameSongFinder
 {
-    public class NameSongFinder
+    public class NameSongFinder : INameSongFinder
     {
         public async Task<Track> FindSongForName(string name)
         {
@@ -73,64 +73,6 @@ namespace NameSongFinder
             }
 
             return tracks.ToArray();
-        }
-    }
-
-    public class MyAlbumsApi : AlbumsApi
-    {
-        public async Task<Album[]> GetAlbumsByArtistId(string artistId, string accessToken = null)
-        {
-            return await GetModelFromProperty<Album[]>($"{BaseUrl}/artists/{artistId}/albums", "items", accessToken);
-        }
-
-        public new async Task<Track[]> GetAlbumTracks(
-            string albumId,
-            int? limit = null,
-            int offset = 0,
-            string market = null,
-            string accessToken = null)
-            => await NewGetAlbumTracks<Track[]>(albumId, limit: limit, offset: offset, market: market, accessToken: accessToken);
-
-        public async Task<T> NewGetAlbumTracks<T>(
-            string albumId,
-            int? limit = null,
-            int offset = 0,
-            string market = null,
-            string accessToken = null)
-        {
-            string url = "https://api.spotify.com/v1/albums/" + SpotifyUriHelper.AlbumId(albumId) + "/tracks";
-            if (limit.HasValue || !string.IsNullOrEmpty(market))
-                url += "?";
-            if (limit.HasValue)
-                url += string.Format("limit={0}&offset={1}&", (object)limit.Value, (object)offset);
-            if (!string.IsNullOrEmpty(market))
-                url = url + "market=" + market;
-            return await GetModelFromProperty<T>(url, "items", accessToken);
-        }
-
-        protected internal virtual async Task<T> NewGetModel<T>(string url, string accessToken = null)
-        {
-            HttpClient http = this._http;
-            string requestUrl = url;
-            string parameter = accessToken;
-            if (parameter == null)
-                parameter = await this.GetAccessToken((string)null);
-            var result = await http.Get(requestUrl, new AuthenticationHeaderValue("Bearer", parameter));
-            result = "[" + result + "]";
-            return JsonConvert.DeserializeObject<T>(result);
-        }
-
-        public MyAlbumsApi(HttpClient httpClient) : base(httpClient)
-        {
-        }
-
-        public MyAlbumsApi(HttpClient httpClient, string accessToken) : base(httpClient, accessToken)
-        {
-        }
-
-        public MyAlbumsApi(HttpClient httpClient, IAccessTokenProvider accessTokenProvider) : base(httpClient, accessTokenProvider)
-        {
-            
         }
     }
 }
