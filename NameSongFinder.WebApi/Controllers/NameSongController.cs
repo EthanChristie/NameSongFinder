@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using SpotifyApi.NetCore;
 
 namespace NameSongFinder.WebApi.Controllers
@@ -12,18 +8,12 @@ namespace NameSongFinder.WebApi.Controllers
     [Route("[controller]")]
     public class NameSongController : ControllerBase
     {
-        private readonly INameSongFinder _nameSongFinder;
-
-        public NameSongController(INameSongFinder nameSongFinder)
-        {
-            _nameSongFinder = nameSongFinder;
-        }
-
         [HttpGet]
-        public IActionResult Get(string name)
+        [Route("{name?}")]
+        public async Task<Track> Get(string name = "Chris")
         {
-            var track = _nameSongFinder.FindSongForName(name);
-            return Ok(track);
+            var nameSongFinder = new NameSongFinder();
+            return await nameSongFinder.FindSongForName(name);
         }
     }
 }

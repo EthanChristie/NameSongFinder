@@ -1,18 +1,18 @@
-{
+﻿{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
   "iisSettings": {
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "http://localhost:56104",
-      "sslPort": 44338
+      "applicationUrl": "http://localhost:56781",
+      "sslPort": 44358
     }
   },
-  "$schema": "http://json.schemastore.org/launchsettings.json",
   "profiles": {
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "namesongfinder",
+      "launchUrl": "namesong",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
@@ -20,11 +20,11 @@
     "NameSongFinder.WebApi": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "namesongfinder",
+      "launchUrl": "namesong",
+      "applicationUrl": "https://localhost:5001;http://localhost:5000",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "applicationUrl": "https://localhost:5001;http://localhost:5000"
+      }
     }
   }
 }
