@@ -1,20 +1,23 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SpotifyApi.NetCore;
 using SpotifyApi.NetCore.Authorization;
+using SpotifyApi.NetCore.Helpers;
 using SpotifyApi.NetCore.Http;
 
 namespace NameSongFinder
 {
     public class NameSongFinder
     {
-        public async Task<string> FindSongForName(string name)
+        public async Task<Track> FindSongForName(string name)
         {
             // HttpClient and AccountsService can be reused. 
             // Tokens are automatically cached and refreshed
@@ -36,8 +39,6 @@ namespace NameSongFinder
 
             var artistId = guyWhoSingsYourNameOverAndOverAgain.Id;
 
-            Trace.WriteLine($"Artist.Name = {guyWhoSingsYourNameOverAndOverAgain.Name}");
-
             var accessToken = await accountsService.GetAccessToken();
             var albumApi = new MyAlbumsApi(httpClient, accessToken);
 
@@ -45,35 +46,33 @@ namespace NameSongFinder
 
             foreach (var album in albumsByArtistId)
             {
-                Trace.WriteLine(album.Name);
+                var albumTracks = await GetAllAlbumTracks(albumApi, album);
+
+                foreach (var albumTrack in albumTracks)
+                {
+                    if (albumTrack.Name.Contains(name))
+                    {
+                        return albumTrack;
+                    }
+                }
             }
 
+            return new Track();
+        }
 
-            // Get recommendations based on seed Artist Ids
-            //var browse = new BrowseApi(http, accounts);
-            //RecommendationsResult result = await browse.GetRecommendations(new[] { "1tpXaFf2F55E7kVJON4j4G", "4Z8W4fKeB5YxbusRsdQVPb" }, null, null);
-            //string firstTrackName = result.Tracks[0].Name;
-            //Trace.WriteLine($"First recommendation = {firstTrackName}");
+        private static async Task<Track[]> GetAllAlbumTracks(MyAlbumsApi albumApi, Album album)
+        {
+            var offset = 0;
+            var tracks = new List<Track>();
 
-            //// Page through a list of tracks in a Playlist
-            //var playlists = new PlaylistsApi(http, accounts);
-            //int limit = 100;
-            //PlaylistPaged playlist = await playlists.GetTracks("4h4urfIy5cyCdFOc1Ff4iN", limit: limit);
-            //int offset = 0;
-            //int j = 0;
-            //// using System.Linq
-            //while (playlist.Items.Any())
-            //{
-            //    for (int i = 0; i < playlist.Items.Length; i++)
-            //    {
-            //        Trace.WriteLine($"Track #{j += 1}: {playlist.Items[i].Track.Artists[0].Name} / {playlist.Items[i].Track.Name}");
-            //    }
-            //    offset += limit;
-            //    playlist = await playlists.GetTracks("4h4urfIy5cyCdFOc1Ff4iN", limit: limit, offset: offset);
-            //}
+            while (offset < album.TotalTracks)
+            {
+                var tracksResponse = await albumApi.GetAlbumTracks(album.Id, 20, offset);
+                tracks.AddRange(tracksResponse);
+                offset += tracksResponse.Length;
+            }
 
-            return guyWhoSingsYourNameOverAndOverAgain.Name;
-
+            return tracks.ToArray();
         }
     }
 
@@ -82,6 +81,43 @@ namespace NameSongFinder
         public async Task<Album[]> GetAlbumsByArtistId(string artistId, string accessToken = null)
         {
             return await GetModelFromProperty<Album[]>($"{BaseUrl}/artists/{artistId}/albums", "items", accessToken);
+        }
+
+        public new async Task<Track[]> GetAlbumTracks(
+            string albumId,
+            int? limit = null,
+            int offset = 0,
+            string market = null,
+            string accessToken = null)
+            => await NewGetAlbumTracks<Track[]>(albumId, limit: limit, offset: offset, market: market, accessToken: accessToken);
+
+        public async Task<T> NewGetAlbumTracks<T>(
+            string albumId,
+            int? limit = null,
+            int offset = 0,
+            string market = null,
+            string accessToken = null)
+        {
+            string url = "https://api.spotify.com/v1/albums/" + SpotifyUriHelper.AlbumId(albumId) + "/tracks";
+            if (limit.HasValue || !string.IsNullOrEmpty(market))
+                url += "?";
+            if (limit.HasValue)
+                url += string.Format("limit={0}&offset={1}&", (object)limit.Value, (object)offset);
+            if (!string.IsNullOrEmpty(market))
+                url = url + "market=" + market;
+            return await GetModelFromProperty<T>(url, "items", accessToken);
+        }
+
+        protected internal virtual async Task<T> NewGetModel<T>(string url, string accessToken = null)
+        {
+            HttpClient http = this._http;
+            string requestUrl = url;
+            string parameter = accessToken;
+            if (parameter == null)
+                parameter = await this.GetAccessToken((string)null);
+            var result = await http.Get(requestUrl, new AuthenticationHeaderValue("Bearer", parameter));
+            result = "[" + result + "]";
+            return JsonConvert.DeserializeObject<T>(result);
         }
 
         public MyAlbumsApi(HttpClient httpClient) : base(httpClient)
